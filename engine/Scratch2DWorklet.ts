@@ -1,7 +1,10 @@
-import { BodyType } from "@/engine/Scratch2D";
 import { vec, Vector } from "@shopify/react-native-skia";
 import { SharedValue } from "react-native-reanimated";
 
+export enum BodyType {
+  CIRCLE = "circle",
+  RECTANGLE = "rectangle",
+}
 // Worklet function to create engine with SharedValue arrays
 export function createEngineOnUI(
   width: number,
