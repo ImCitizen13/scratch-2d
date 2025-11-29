@@ -1,6 +1,8 @@
+import { BodyType, Engine } from "@/engine/Scratch2DTypes";
 import {
     addCircleAtPositionWorklet,
     createEngineOnUI,
+    stepEngine,
 } from "@/engine/Scratch2DWorklet";
 
 import useGetScreenDimentions from "@/hooks/useGetScreenDimentions";
@@ -11,12 +13,11 @@ import {
     Group,
     Text,
     useFont,
-    vec,
 } from "@shopify/react-native-skia";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { PressableOpacity } from "pressto";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { Text as RNText, View } from "react-native";
 import {
     Gesture,
@@ -37,30 +38,56 @@ export default function index() {
   // Pre-allocate SharedValue arrays
   const sharedXs = Array.from({ length: MAX_BODIES }, () => useSharedValue(0));
   const sharedYs = Array.from({ length: MAX_BODIES }, () => useSharedValue(0));
+  const sharedPrevXs = Array.from({ length: MAX_BODIES }, () =>
+    useSharedValue(0)
+  );
+  const sharedPrevYs = Array.from({ length: MAX_BODIES }, () =>
+    useSharedValue(0)
+  );
+  const sharedAccelXs = Array.from({ length: MAX_BODIES }, () =>
+    useSharedValue(0)
+  );
+  const sharedAccelYs = Array.from({ length: MAX_BODIES }, () =>
+    useSharedValue(0)
+  );
   const sharedRadius = Array.from({ length: MAX_BODIES }, () =>
     useSharedValue(0)
   );
+  const sharedColors = Array.from({ length: MAX_BODIES }, () =>
+    useSharedValue("#000000")
+  );
+  const sharedTypes = Array.from({ length: MAX_BODIES }, () =>
+    useSharedValue(BodyType.CIRCLE)
+  );
+  const sharedIsStatic = Array.from({ length: MAX_BODIES }, () =>
+    useSharedValue(false)
+  );
   const bodyCount = useSharedValue(0);
-  const engineRef = useSharedValue<any>(null);
+  const engineRef = useSharedValue<Engine | null>(null);
   const lastUpdate = useSharedValue<number>(Date.now());
 
   // Line 96: Use useRef instead of let
-  const poolIndexRef = useRef(0);
+  const poolIndexRef = useSharedValue(0);
 
   // Create engine on UI thread with SharedValue arrays
   useEffect(() => {
-    scheduleOnUI(
-      createEngineOnUI,
+    scheduleOnUI(createEngineOnUI, {
       width,
       height,
       engineRef,
       sharedXs,
       sharedYs,
+      sharedPrevXs, // NEW
+      sharedPrevYs, // NEW
+      sharedAccelXs, // NEW
+      sharedAccelYs, // NEW
       sharedRadius,
-      bodyCount
-    );
+      bodyCount,
+      sharedColors,
+      sharedTypes,
+      sharedIsStatic,
+    });
     // Line 96: Use useRef instead of let
-    poolIndexRef.current++;
   }, []);
 
   useFrameCallback(({ timeSincePreviousFrame }) => {
@@ -71,46 +98,24 @@ export default function index() {
       (timeSincePreviousFrame || 0) > 0 ? timeSincePreviousFrame || 0 : 16.67;
     const clampedDelta = Math.min(deltaMs, 33.34) / 1000;
 
-    engine.step(clampedDelta);
+    stepEngine(engine, clampedDelta);
     lastUpdate.value += deltaMs;
   });
 
-  const positionPool = Array.from({ length: MAX_BODIES }, () =>
-    useSharedValue(vec(0, 0))
-  );
-  const accelerationPool = Array.from({ length: MAX_BODIES }, () =>
-    useSharedValue(vec(0, 0))
-  );
-  const positionPreviousPool = Array.from({ length: MAX_BODIES }, () =>
-    useSharedValue(vec(0, 0))
-  );
+  const tap = Gesture.Tap().onEnd((event: any) => {
+    "worklet";
+    if (poolIndexRef.value >= MAX_BODIES) return;
 
-  const tap = Gesture.Tap()
-    .onEnd((event: any) => {
-      "worklet";
-      if (poolIndexRef.current >= MAX_BODIES) return;
-
-      const pos = positionPool[poolIndexRef.current];
-      const accel = accelerationPool[poolIndexRef.current];
-      const prev = positionPreviousPool[poolIndexRef.current];
-
-      pos.value = vec(event.x, event.y);
-      accel.value = vec(0, 0);
-      prev.value = vec(event.x, event.y);
-
-      addCircleAtPositionWorklet(
-        engineRef,
-        pos,
-        accel,
-        prev,
-        15,
-        poolIndexRef.current % 2 == 0 ? "#25F4EE" : "#FE2C55"
-      );
-
-    })
-    .onFinalize(() => {
-      poolIndexRef.current++;
+    addCircleAtPositionWorklet({
+      engineRef,
+      x: event.x,
+      y: event.y,
+      radius: 15,
+      color: poolIndexRef.value % 2 == 0 ? "#25F4EE" : "#FE2C55",
+      isStatic: false,
     });
+    poolIndexRef.value++;
+  });
 
   const font = useFont(require("../assets/fonts/SpaceMono-Regular.ttf"), 50);
   const font2 = useFont(require("../assets/fonts/SpaceMono-Regular.ttf"), 20);
@@ -123,6 +128,10 @@ export default function index() {
   const countText2 = useDerivedValue(() => {
     return `Collision Checks: ${bodyCount.value * bodyCount.value}`;
   });
+
+  //   const visibleBodies = useDerivedValue(() => {
+  //     return bodyCount.value;
+  //   }, [bodyCount]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -171,7 +180,7 @@ export default function index() {
                   cx={sharedXs[i]} // Skia reads SharedValue directly
                   cy={sharedYs[i]} // Skia reads SharedValue directly
                   r={sharedRadius[i]} // Skia reads SharedValue directly
-                  color={poolIndexRef.current % 2 == 0 ? "#25F4EE" : "#FE2C55"}
+                  color={sharedColors[i]}
                 />
               ))}
             </Group>
