@@ -7,13 +7,7 @@ import {
 
 import useGetScreenDimentions from "@/hooks/useGetScreenDimentions";
 import AntDesign from "@expo/vector-icons/AntDesign";
-import {
-    Canvas,
-    Circle,
-    Group,
-    Text,
-    useFont,
-} from "@shopify/react-native-skia";
+import { Canvas, Circle, Group, useFont } from "@shopify/react-native-skia";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { PressableOpacity } from "pressto";
@@ -73,7 +67,7 @@ export default function index() {
   useEffect(() => {
     scheduleOnUI(createEngineOnUI, {
       width,
-      height,
+      height: height * 0.8,
       engineRef,
       sharedXs,
       sharedYs,
@@ -86,7 +80,18 @@ export default function index() {
       sharedColors,
       sharedTypes,
       sharedIsStatic,
+      worldGravity: { x: 0, y: 200 },
     });
+    // scheduleOnUI(() => {
+    //   addCircleAtPositionWorklet({
+    //     engineRef,
+    //     x: width / 2,
+    //     y: height / 2,
+    //     radius: 20,
+    //     color: "#ffffff",
+    //     isStatic: true,
+    //   });
+    // });
     // Line 96: Use useRef instead of let
   }, []);
 
@@ -168,11 +173,11 @@ export default function index() {
             style={{
               flex: 1,
               width: "100%",
-              height: "100%",
+              height: height * 0.8,
             }}
           >
-            <Text text={countText} font={font} x={25} y={100} color="white" />
-            <Text text={countText2} font={font2} x={25} y={150} color="white" />
+            {/* <Text text={countText} font={font} x={25} y={100} color="white" />
+            <Text text={countText2} font={font2} x={25} y={150} color="white" /> */}
             <Group>
               {Array.from({ length: MAX_BODIES }, (_, i) => (
                 <Circle

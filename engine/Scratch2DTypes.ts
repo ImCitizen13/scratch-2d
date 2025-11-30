@@ -70,6 +70,7 @@ export interface Engine extends EngineArrays, EngineGrid {
   height: number;
   bodies: Body[];
   bodyCount: SharedValue<number>;
+  worldGravity: { x: number; y: number };
 }
 
 // ============================================
@@ -91,6 +92,7 @@ export interface CreateEngineOptionsInterface {
   sharedTypes: SharedValue<BodyType>[];
   sharedIsStatic: SharedValue<boolean>[];
   bodyCount: SharedValue<number>;
+  worldGravity: { x: number; y: number };
 }
 
 export interface AddCircleWithValuesOptionsInterface {
